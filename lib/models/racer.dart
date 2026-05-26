@@ -7,11 +7,13 @@ class Racer {
   final String name;
   final IconData icon;
   final Color color;
+  final String imagePath;
 
   Racer({
     required this.id,
     required this.name,
     required this.icon,
     required this.color,
+    required this.imagePath,
   });
 }

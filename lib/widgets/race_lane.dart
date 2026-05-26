@@ -1,83 +1,86 @@
 import 'package:flutter/material.dart';
 import '../models/racer.dart';
+import '../theme/f1_theme.dart';
 
-/// A widget representing a single racing track lane.
-/// Draws a horizontal lane with starting line, finish area, and positions the racer based on progress.
+/// Horizontal race lane — restores original left-to-right car animation.
+/// Styled with F1 asphalt aesthetics: team color left strip, dashed lane
+/// markings, start/finish lines, and car image positioned by progress.
 class RaceLane extends StatelessWidget {
   final Racer racer;
-  final double progress; // Value from 0.0 (start) to 1.0 (finish)
+  final double progress; // 0.0 (start) to 1.0 (finish)
   final double racerSize;
 
   const RaceLane({
-    Key? key,
+    super.key,
     required this.racer,
     required this.progress,
-    this.racerSize = 50.0,
-  }) : super(key: key);
+    this.racerSize = 80.0,
+  });
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double trackWidth = constraints.maxWidth;
-        // The maximum offset a racer can move before hitting the finish line
-        final double maxMoveDistance = trackWidth - racerSize - 40; // reserve space for finish flag
+        final double maxMoveDistance = trackWidth - racerSize - 40;
         final double currentLeftOffset = progress * maxMoveDistance;
 
+        final orientation = MediaQuery.of(context).orientation;
+        final double laneHeight = orientation == Orientation.portrait ? 80.0 : 50.0;
+        final double laneMargin = orientation == Orientation.portrait ? 6.0 : 3.0;
+
         return Container(
-          height: 80,
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          height: laneHeight,
+          margin: EdgeInsets.symmetric(vertical: laneMargin),
           decoration: BoxDecoration(
-            color: Colors.grey[900],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[800]!, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            color: F1Colors.pitWallGray,
+            border: Border(
+              left: BorderSide(color: racer.color, width: 4),
+              top: const BorderSide(color: F1Colors.borderGray, width: 0.5),
+              right: const BorderSide(color: F1Colors.borderGray, width: 0.5),
+              bottom: const BorderSide(color: F1Colors.borderGray, width: 0.5),
+            ),
           ),
           child: Stack(
             children: [
-              // 1. Dotted Lane Marking (Asphalt divider line in center)
+              // 1. Dashed lane markings (horizontal center line)
               Center(
                 child: Row(
                   children: List.generate(
-                    20,
+                    24,
                     (index) => Expanded(
                       child: Container(
-                        height: 2,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        color: Colors.grey[700]!.withOpacity(0.5),
+                        height: 1.5,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        color: F1Colors.borderGray.withAlpha(80),
                       ),
                     ),
                   ),
                 ),
               ),
 
-              // 2. Start Line
+              // 2. Start line (vertical white line)
               Positioned(
-                left: 40,
+                left: 44,
+                top: 0,
+                bottom: 0,
+                child: Container(
+                  width: 2,
+                  color: F1Colors.textMuted.withAlpha(60),
+                ),
+              ),
+
+              // 3. Finish line (red vertical strip + checkered pattern)
+              Positioned(
+                right: 36,
                 top: 0,
                 bottom: 0,
                 child: Container(
                   width: 4,
-                  color: Colors.white.withOpacity(0.3),
+                  color: F1Colors.racingRed.withAlpha(180),
                 ),
               ),
-
-              // 3. Finish Line (Checkered area & Flag)
-              Positioned(
-                right: 40,
-                top: 0,
-                bottom: 0,
-                child: Container(
-                  width: 8,
-                  color: Colors.redAccent.withOpacity(0.7),
-                ),
-              ),
+              // Finish flag
               Positioned(
                 right: 8,
                 top: 0,
@@ -87,65 +90,61 @@ class RaceLane extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.flag,
-                      color: racer.color,
-                      size: 24,
+                      color: F1Colors.textMuted,
+                      size: orientation == Orientation.portrait ? 20 : 14,
                     ),
-                    Text(
-                      'FINISH',
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[400],
-                      ),
-                    )
                   ],
                 ),
               ),
 
-              // 4. Positioned Racer Icon
+              // 4. Driver name tag (left side inside lane)
+              Positioned(
+                left: 8,
+                top: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: F1Colors.carbonBlack.withAlpha(180),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Text(
+                    racer.name.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 7,
+                      fontWeight: FontWeight.w800,
+                      color: racer.color,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+
+              // 5. Progress percentage (right side)
+              Positioned(
+                right: 48,
+                bottom: 4,
+                child: Text(
+                  '${(progress * 100).toInt()}%',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: F1Colors.textMuted,
+                  ),
+                ),
+              ),
+
+              // 6. Animated car image — original left-to-right movement
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 50),
                 curve: Curves.easeOut,
-                left: currentLeftOffset + 10, // padding offset from start
-                top: 10,
-                bottom: 10,
+                left: currentLeftOffset + 12,
+                top: orientation == Orientation.portrait ? 10.0 : 5.0,
+                bottom: orientation == Orientation.portrait ? 10.0 : 5.0,
                 child: SizedBox(
                   width: racerSize,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Glow effect matching racer's color
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: racer.color.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: racer.color.withOpacity(0.4),
-                              blurRadius: 8,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          racer.icon,
-                          color: racer.color,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      // Small text showing the racer name
-                      Text(
-                        racer.name,
-                        style: const TextStyle(
-                          fontSize: 8,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  child: Image.asset(
+                    racer.imagePath,
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/racer.dart';
+import '../theme/f1_theme.dart';
 
-/// A card widget to display a racer and handle their betting input.
-/// Provides +/- buttons and a text input field for direct entry.
+/// Driver card styled like an F1 starting grid entry.
+/// Shows car image, driver name, payout odds, and bet controls.
 class RacerBetCard extends StatelessWidget {
   final Racer racer;
   final double betAmount;
@@ -13,178 +14,165 @@ class RacerBetCard extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   const RacerBetCard({
-    Key? key,
+    super.key,
     required this.racer,
     required this.betAmount,
     required this.controller,
     required this.onIncrement,
     required this.onDecrement,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Determine color scheme based on racer color for a premium cohesive look
-    final Color primaryColor = racer.color;
-    
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: BoxDecoration(
-          // Soft gradient matching racer's theme
-          gradient: LinearGradient(
-            colors: [
-              primaryColor.withOpacity(0.05),
-              primaryColor.withOpacity(0.15),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
+    final Color accent = racer.color;
+    final bool isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
+    final double cardPaddingX = isLandscape ? 10.0 : 14.0;
+    final double cardPaddingY = isLandscape ? 8.0 : 12.0;
+    final double imgWidth = isLandscape ? 60.0 : 80.0;
+    final double imgHeight = isLandscape ? 36.0 : 50.0;
+    final double titleFontSize = isLandscape ? 13.0 : 16.0;
+    final double controlBtnSize = isLandscape ? 34.0 : 40.0;
+    final double inputWidth = isLandscape ? 56.0 : 64.0;
+    final double inputFontSize = isLandscape ? 13.0 : 15.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: F1Colors.panelGray,
+        // No borderRadius — non-uniform border colors require sharp edges
+        // (also more authentic to F1 broadcast UI)
+        border: Border(
+          left: BorderSide(color: accent, width: 4),
+          top: const BorderSide(color: F1Colors.borderGray, width: 0.5),
+          right: const BorderSide(color: F1Colors.borderGray, width: 0.5),
+          bottom: const BorderSide(color: F1Colors.borderGray, width: 0.5),
         ),
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            // Racer Icon and color tag
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.2),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryColor.withOpacity(0.3),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  )
-                ],
-              ),
-              child: Icon(
-                racer.icon,
-                color: primaryColor,
-                size: 32,
-              ),
+      ),
+      padding: EdgeInsets.symmetric(horizontal: cardPaddingX, vertical: cardPaddingY),
+      child: Row(
+        children: [
+          // Car image container
+          Container(
+            width: imgWidth,
+            height: imgHeight,
+            decoration: BoxDecoration(
+              color: F1Colors.asphaltDark,
+              borderRadius: BorderRadius.circular(4),
             ),
-            const SizedBox(width: 16),
-            
-            // Racer details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    racer.name,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          color: primaryColor.withOpacity(0.5),
-                          offset: const Offset(0, 1),
-                          blurRadius: 2,
-                        )
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Payout: x2',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[400],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Bet inputs: Minus, TextField, Plus
-            Row(
-              mainAxisSize: MainAxisSize.min,
+            padding: const EdgeInsets.all(4),
+            child: Image.asset(racer.imagePath, fit: BoxFit.contain),
+          ),
+          SizedBox(width: isLandscape ? 10.0 : 14.0),
+
+          // Driver name + payout label
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Minus button
-                _buildRoundButton(
-                  icon: Icons.remove,
-                  color: primaryColor,
-                  onTap: onDecrement,
-                ),
-                
-                // Text Field Input
-                Container(
-                  width: 70,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  child: TextField(
-                    controller: controller,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      // Allow only numbers and a single decimal point
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    onChanged: onChanged,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                      filled: true,
-                      fillColor: Colors.black.withOpacity(0.3),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: primaryColor.withOpacity(0.4)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: primaryColor, width: 1.5),
-                      ),
-                    ),
+                Text(
+                  racer.name.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.w800,
+                    color: F1Colors.textPrimary,
+                    letterSpacing: isLandscape ? 0.4 : 0.8,
                   ),
                 ),
-                
-                // Plus button
-                _buildRoundButton(
-                  icon: Icons.add,
-                  color: primaryColor,
-                  onTap: onIncrement,
+                SizedBox(height: isLandscape ? 2.0 : 4.0),
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: isLandscape ? 5 : 6, vertical: isLandscape ? 1.5 : 2),
+                      decoration: BoxDecoration(
+                        color: accent.withAlpha(40),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Text(
+                        'x2',
+                        style: TextStyle(
+                          fontSize: isLandscape ? 9.0 : 11.0,
+                          fontWeight: FontWeight.w700,
+                          color: accent,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'PAYOUT',
+                      style: TextStyle(
+                        fontSize: isLandscape ? 8.0 : 10.0,
+                        fontWeight: FontWeight.w600,
+                        color: F1Colors.textMuted,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+
+          // Bet controls: [ - ] [ input ] [ + ]
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildControlButton(Icons.remove, accent, onDecrement, controlBtnSize),
+              Container(
+                width: inputWidth,
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                child: TextField(
+                  controller: controller,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ],
+                  onChanged: onChanged,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: inputFontSize,
+                    fontWeight: FontWeight.w700,
+                    color: F1Colors.textPrimary,
+                  ),
+                  decoration: InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(vertical: isLandscape ? 6 : 8),
+                    filled: true,
+                    fillColor: F1Colors.carbonBlack,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide: const BorderSide(color: F1Colors.borderGray),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide: BorderSide(color: accent, width: 1.5),
+                    ),
+                  ),
+                ),
+              ),
+              _buildControlButton(Icons.add, accent, onIncrement, controlBtnSize),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  // Helper builder for custom round buttons
-  Widget _buildRoundButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  /// Square control button with team accent color.
+  Widget _buildControlButton(IconData icon, Color color, VoidCallback onTap, double size) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(4),
         child: Container(
-          width: 36,
-          height: 36,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: color.withOpacity(0.6), width: 1.5),
-            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: F1Colors.borderGray, width: 1),
+            color: F1Colors.asphaltDark,
           ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: color,
-          ),
+          child: Icon(icon, size: size * 0.5, color: color),
         ),
       ),
     );

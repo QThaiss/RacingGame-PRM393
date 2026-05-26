@@ -2,49 +2,45 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/racer.dart';
+import '../theme/f1_theme.dart';
 import '../widgets/race_lane.dart';
 import 'result_screen.dart';
 
-/// Screen where the race simulation takes place.
-/// Displays tracks and uses a Timer.periodic to animate the racer icons based on random offsets.
+/// Race screen — F1 broadcast HUD with original horizontal lanes.
+/// Cars move left-to-right. F1-style 5-light start sequence, bet strip,
+/// live leader display, and winner overlay.
 class RaceScreen extends StatefulWidget {
   final double totalMoney;
   final Map<String, double> bets;
   final List<Racer> racers;
 
   const RaceScreen({
-    Key? key,
+    super.key,
     required this.totalMoney,
     required this.bets,
     required this.racers,
-  }) : super(key: key);
+  });
 
   @override
   State<RaceScreen> createState() => _RaceScreenState();
 }
 
 class _RaceScreenState extends State<RaceScreen> {
-  // Store the progress (0.0 to 1.0) of each racer
   final Map<String, double> _positions = {};
-  
-  // Timer for racing updates
   Timer? _raceTimer;
-  
-  // State variables
+  Timer? _countdownTimer;
   bool _isRacing = false;
   int _countdown = 3;
-  Timer? _countdownTimer;
   Racer? _winner;
+  int _lightsLit = 0;
 
   @override
   void initState() {
     super.initState();
-    // Initialize positions of all racers to 0.0
     for (var racer in widget.racers) {
       _positions[racer.id] = 0.0;
     }
-    // Automatically trigger countdown on screen entry
-    _startCountdown();
+    _startLightSequence();
   }
 
   @override
@@ -54,14 +50,15 @@ class _RaceScreenState extends State<RaceScreen> {
     super.dispose();
   }
 
-  // Count down from 3 to 1 before starting the race
-  void _startCountdown() {
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  /// F1-style: lights go on one-by-one (5 reds), then all out = GO
+  void _startLightSequence() {
+    _countdownTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
       setState(() {
-        if (_countdown > 1) {
-          _countdown--;
+        if (_lightsLit < 5) {
+          _lightsLit++;
+          _countdown = 5 - _lightsLit;
         } else {
-          _countdown = 0; // 0 represents "GO!"
+          _countdown = 0;
           _countdownTimer?.cancel();
           _startRace();
         }
@@ -69,7 +66,6 @@ class _RaceScreenState extends State<RaceScreen> {
     });
   }
 
-  // Start the periodic timer to move the racers
   void _startRace() {
     setState(() {
       _isRacing = true;
@@ -81,15 +77,13 @@ class _RaceScreenState extends State<RaceScreen> {
       setState(() {
         for (var racer in widget.racers) {
           final double currentProgress = _positions[racer.id] ?? 0.0;
-          
-          // Random increment between 0.0 and 0.03
           final double step = random.nextDouble() * 0.03;
           final double newProgress = currentProgress + step;
 
           if (newProgress >= 1.0) {
             _positions[racer.id] = 1.0;
             _handleRaceFinish(racer);
-            break; // Stop checking other racers once we have a winner
+            break;
           } else {
             _positions[racer.id] = newProgress;
           }
@@ -98,7 +92,6 @@ class _RaceScreenState extends State<RaceScreen> {
     });
   }
 
-  // Stop the race and navigate to results after a brief delay
   void _handleRaceFinish(Racer winnerRacer) {
     _raceTimer?.cancel();
     setState(() {
@@ -106,14 +99,12 @@ class _RaceScreenState extends State<RaceScreen> {
       _winner = winnerRacer;
     });
 
-    // Pause for 1.5 seconds so user can see who crossed the line,
-    // then replace this screen with ResultScreen in the stack.
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    Future.delayed(const Duration(milliseconds: 1800), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ResultScreen(
+            builder: (_) => ResultScreen(
               winner: winnerRacer,
               totalMoney: widget.totalMoney,
               bets: widget.bets,
@@ -125,67 +116,67 @@ class _RaceScreenState extends State<RaceScreen> {
     });
   }
 
+  /// Compute sorted standings for leader display
+  List<MapEntry<Racer, double>> _getSortedPositions() {
+    final entries = widget.racers.map((r) => MapEntry(r, _positions[r.id] ?? 0.0)).toList();
+    entries.sort((a, b) => b.value.compareTo(a.value));
+    return entries;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sorted = _getSortedPositions();
+    final orientation = MediaQuery.of(context).orientation;
+    final double trackSpacing = orientation == Orientation.portrait ? 12.0 : 6.0;
+
     return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('ĐƯỜNG ĐUA RỰC LỬA'),
-        centerTitle: true,
-        backgroundColor: Colors.grey[950],
-        automaticallyImplyLeading: false, // Prevent going back mid-race
-      ),
+      backgroundColor: F1Colors.carbonBlack,
       body: SafeArea(
         child: Stack(
           children: [
-            // --- Race Tracks Container ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Header stats
-                  _buildBettingSummaryHeader(),
-                  const SizedBox(height: 20),
+            // ── Main race layout ──
+            Column(
+              children: [
+                // Top bar
+                _buildRaceTopBar(),
 
-                  // Tracks list
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: widget.racers.map((racer) {
-                        return RaceLane(
-                          racer: racer,
-                          progress: _positions[racer.id] ?? 0.0,
-                        );
-                      }).toList(),
+                // Bet summary strip
+                _buildBetStrip(),
+
+                // Horizontal race tracks (original Column layout)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: trackSpacing),
+                    child: Center(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: widget.racers.map((racer) {
+                            return RaceLane(
+                              racer: racer,
+                              progress: _positions[racer.id] ?? 0.0,
+                            );
+                          }).toList(),
+                        ),
+                      ),
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 20),
-                  // Bottom Info
-                  Text(
-                    _isRacing
-                        ? 'Các tay đua đang bứt tốc! 🚗⚡'
-                        : (_winner != null ? '🎉 ${_winner!.name} ĐÃ CHIẾN THẮNG!' : 'Chuẩn bị xuất phát...'),
-                    style: TextStyle(
-                      color: _winner != null ? _winner!.color : Colors.white70,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                // Bottom status bar
+                _buildStatusBar(sorted),
+              ],
             ),
 
-            // --- Countdown Overlay ---
+            // ── Countdown / 5-light overlay ──
             if (_countdown > 0)
-              _buildCountdownOverlay()
-            else if (_countdown == 0 && !_isRacing && _winner == null)
+              _buildLightsOverlay(),
+
+            // ── "LIGHTS OUT" overlay ──
+            if (_countdown == 0 && !_isRacing && _winner == null)
               _buildGoOverlay(),
 
-            // --- Winner Confetti/Glow Overlay ---
+            // ── Winner overlay ──
             if (_winner != null)
               _buildWinnerOverlay(),
           ],
@@ -194,69 +185,183 @@ class _RaceScreenState extends State<RaceScreen> {
     );
   }
 
-  // Summary of bets placed shown at the top of the race screen
-  Widget _buildBettingSummaryHeader() {
+  /// F1 top header bar
+  Widget _buildRaceTopBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: const BoxDecoration(
+        color: F1Colors.asphaltDark,
+        border: Border(bottom: BorderSide(color: F1Colors.racingRed, width: 2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
+          const Icon(Icons.speed, color: F1Colors.racingRed, size: 18),
+          const SizedBox(width: 8),
           const Text(
-            'BẢNG ĐẶT CƯỢC CỦA BẠN',
-            style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold),
+            'RACE LIVE',
+            style: TextStyle(
+              color: F1Colors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2.5,
+            ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: widget.racers.map((racer) {
-              final double bet = widget.bets[racer.id] ?? 0.0;
-              return Row(
+          const Spacer(),
+          if (_isRacing)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: F1Colors.racingRed.withAlpha(30),
+                borderRadius: BorderRadius.circular(2),
+                border: Border.all(color: F1Colors.racingRed),
+              ),
+              child: const Row(
                 children: [
-                  Icon(racer.icon, color: racer.color, size: 16),
-                  const SizedBox(width: 4),
+                  Icon(Icons.circle, color: F1Colors.racingRed, size: 6),
+                  SizedBox(width: 4),
                   Text(
-                    '${racer.name}: \$${bet.toStringAsFixed(0)}',
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                  )
+                    'RACING',
+                    style: TextStyle(
+                      color: F1Colors.racingRed,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
-              );
-            }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Compact bet summary strip
+  Widget _buildBetStrip() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: F1Colors.pitWallGray,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: widget.racers.map((racer) {
+          final double bet = widget.bets[racer.id] ?? 0.0;
+          return Row(
+            children: [
+              Container(
+                width: 10, height: 10,
+                decoration: BoxDecoration(
+                  color: racer.color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '${racer.name}: \$${bet.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: F1Colors.textPrimary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// Bottom status / leader bar
+  Widget _buildStatusBar(List<MapEntry<Racer, double>> sorted) {
+    final String statusText;
+    if (_winner != null) {
+      statusText = '🏆 ${_winner!.name.toUpperCase()} WINS!';
+    } else if (_isRacing) {
+      final leader = sorted.first.key;
+      statusText = 'LEADER: ${leader.name.toUpperCase()}';
+    } else {
+      statusText = 'FORMATION LAP...';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: F1Colors.asphaltDark,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            _winner != null ? Icons.emoji_events : Icons.timeline,
+            color: _winner != null ? F1Colors.warningAmber : F1Colors.textMuted,
+            size: 14,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            statusText,
+            style: TextStyle(
+              color: _winner != null ? _winner!.color : F1Colors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Big numbered countdown (3, 2, 1) overlay
-  Widget _buildCountdownOverlay() {
+  /// F1 starting lights overlay (5 red lights, one-by-one)
+  Widget _buildLightsOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.85),
+      color: Colors.black.withAlpha(220),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedScale(
-              scale: 1.0,
-              duration: const Duration(milliseconds: 300),
-              child: Text(
-                '$_countdown',
-                style: const TextStyle(
-                  color: Colors.amberAccent,
-                  fontSize: 120,
-                  fontWeight: FontWeight.w900,
-                  fontStyle: FontStyle.italic,
-                ),
+            // 5 lights row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) {
+                final bool isLit = i < _lightsLit;
+                return Container(
+                  width: 40,
+                  height: 40,
+                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isLit ? F1Colors.racingRed : F1Colors.panelGray,
+                    border: Border.all(
+                      color: isLit ? F1Colors.racingRed : F1Colors.borderGray,
+                      width: 2,
+                    ),
+                    boxShadow: isLit
+                        ? [
+                            BoxShadow(
+                              color: F1Colors.racingRed.withAlpha(150),
+                              blurRadius: 20,
+                              spreadRadius: 4,
+                            ),
+                          ]
+                        : [],
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 30),
+            Text(
+              '$_countdown',
+              style: const TextStyle(
+                color: F1Colors.textPrimary,
+                fontSize: 72,
+                fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              'CHUẨN BỊ...',
-              style: TextStyle(color: Colors.grey[400], fontSize: 18, letterSpacing: 2, fontWeight: FontWeight.bold),
+            const SizedBox(height: 8),
+            const Text(
+              'FORMATION LAP',
+              style: TextStyle(
+                color: F1Colors.textMuted,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 3.0,
+              ),
             ),
           ],
         ),
@@ -264,69 +369,99 @@ class _RaceScreenState extends State<RaceScreen> {
     );
   }
 
-  // "GO!" overlay right before timer starts moving racers
+  /// "LIGHTS OUT AND AWAY WE GO" flash overlay
   Widget _buildGoOverlay() {
-    // Schedule a small setState to remove the "GO!" overlay after 500ms
-    Future.delayed(const Duration(milliseconds: 800), () {
+    Future.delayed(const Duration(milliseconds: 900), () {
       if (mounted && _countdown == 0) {
         setState(() {
-          _countdown = -1; // hide go overlay
+          _countdown = -1;
         });
       }
     });
 
     return Container(
-      color: Colors.black.withOpacity(0.5),
+      color: Colors.black.withAlpha(180),
       child: const Center(
-        child: Text(
-          'XUẤT PHÁT!',
-          style: TextStyle(
-            color: Colors.greenAccent,
-            fontSize: 70,
-            fontWeight: FontWeight.w900,
-            fontStyle: FontStyle.italic,
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'LIGHTS OUT',
+              style: TextStyle(
+                color: F1Colors.textPrimary,
+                fontSize: 36,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 4.0,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'AND AWAY WE GO',
+              style: TextStyle(
+                color: F1Colors.signalGreen,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.0,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // Dramatic visual overlay when a racer wins
+  /// Winner celebration overlay — no borderRadius to avoid non-uniform border crash
   Widget _buildWinnerOverlay() {
     return IgnorePointer(
       ignoring: true,
       child: Container(
-        color: _winner!.color.withOpacity(0.15),
+        color: _winner!.color.withAlpha(25),
         child: Center(
-          child: Card(
-            color: Colors.grey[950],
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: _winner!.color, width: 2),
-            ),
-            elevation: 20,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 36.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.emoji_events, color: Colors.amber, size: 60),
-                  const SizedBox(height: 10),
-                  Text(
-                    _winner!.name.toUpperCase(),
-                    style: TextStyle(
-                      color: _winner!.color,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'CHIẾN THẮNG!',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                  ),
-                ],
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
+            decoration: BoxDecoration(
+              color: F1Colors.asphaltDark,
+              // No borderRadius — non-uniform border colors
+              border: Border(
+                top: BorderSide(color: _winner!.color, width: 4),
+                left: const BorderSide(color: F1Colors.borderGray, width: 1),
+                right: const BorderSide(color: F1Colors.borderGray, width: 1),
+                bottom: const BorderSide(color: F1Colors.borderGray, width: 1),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: _winner!.color.withAlpha(60),
+                  blurRadius: 40,
+                  spreadRadius: 8,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.emoji_events, color: F1Colors.warningAmber, size: 48),
+                const SizedBox(height: 12),
+                const Text(
+                  'RACE WINNER',
+                  style: TextStyle(
+                    color: F1Colors.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 3.0,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _winner!.name.toUpperCase(),
+                  style: TextStyle(
+                    color: _winner!.color,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
