@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'screens/login_screen.dart';
 import 'theme/f1_theme.dart';
 
 void main() {
@@ -17,7 +17,7 @@ class MiniRacingGameApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: buildF1Theme(),
-      home: const HomeScreen(),
+      home: const LoginScreen(),
     );
   }
 }
