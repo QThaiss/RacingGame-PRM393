@@ -1,4 +1,4 @@
- import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/racer.dart';
@@ -52,7 +52,8 @@ class _RaceScreenState extends State<RaceScreen> {
 
   /// F1-style: lights go on one-by-one (5 reds), then all out = GO
   void _startLightSequence() {
-    _countdownTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
+    _countdownTimer =
+        Timer.periodic(const Duration(milliseconds: 800), (timer) {
       setState(() {
         if (_lightsLit < 5) {
           _lightsLit++;
@@ -82,12 +83,13 @@ class _RaceScreenState extends State<RaceScreen> {
       setState(() {
         for (var racer in widget.racers) {
           final double currentProgress = _positions[racer.id] ?? 0.0;
-          
+
           // CẢI TIẾN: Tốc độ biến thiên (Variable Speed)
           // Đôi khi xe sẽ tăng tốc mạnh, đôi khi sẽ khựng lại một chút
-          double drift = (random.nextDouble() - 0.48) * 0.005; 
-          momentums[racer.id] = (momentums[racer.id]! + drift).clamp(0.005, 0.04);
-          
+          double drift = (random.nextDouble() - 0.48) * 0.005;
+          momentums[racer.id] =
+              (momentums[racer.id]! + drift).clamp(0.005, 0.04);
+
           final double step = momentums[racer.id]!;
           final double newProgress = currentProgress + step;
 
@@ -110,26 +112,30 @@ class _RaceScreenState extends State<RaceScreen> {
       _winner = winnerRacer;
     });
 
-    Future.delayed(const Duration(milliseconds: 1800), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResultScreen(
-              winner: winnerRacer,
-              totalMoney: widget.totalMoney,
-              bets: widget.bets,
-              racers: widget.racers,
-            ),
+    Future.delayed(const Duration(milliseconds: 1800), () async {
+      if (!mounted) return;
+
+      final double? newMoney = await Navigator.push<double>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResultScreen(
+            winner: winnerRacer,
+            totalMoney: widget.totalMoney,
+            bets: widget.bets,
+            racers: widget.racers,
           ),
-        );
-      }
+        ),
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context, newMoney);
     });
   }
 
   /// Compute sorted standings for leader display
   List<MapEntry<Racer, double>> _getSortedPositions() {
-    final entries = widget.racers.map((r) => MapEntry(r, _positions[r.id] ?? 0.0)).toList();
+    final entries =
+        widget.racers.map((r) => MapEntry(r, _positions[r.id] ?? 0.0)).toList();
     entries.sort((a, b) => b.value.compareTo(a.value));
     return entries;
   }
@@ -138,7 +144,8 @@ class _RaceScreenState extends State<RaceScreen> {
   Widget build(BuildContext context) {
     final sorted = _getSortedPositions();
     final orientation = MediaQuery.of(context).orientation;
-    final double trackSpacing = orientation == Orientation.portrait ? 12.0 : 6.0;
+    final double trackSpacing =
+        orientation == Orientation.portrait ? 12.0 : 6.0;
 
     return Scaffold(
       backgroundColor: F1Colors.carbonBlack,
@@ -157,7 +164,8 @@ class _RaceScreenState extends State<RaceScreen> {
                 // Horizontal race tracks (original Column layout)
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: trackSpacing),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 16, vertical: trackSpacing),
                     child: Center(
                       child: SingleChildScrollView(
                         child: Column(
@@ -180,16 +188,14 @@ class _RaceScreenState extends State<RaceScreen> {
             ),
 
             // ── Countdown / 5-light overlay ──
-            if (_countdown > 0)
-              _buildLightsOverlay(),
+            if (_countdown > 0) _buildLightsOverlay(),
 
             // ── "LIGHTS OUT" overlay ──
             if (_countdown == 0 && !_isRacing && _winner == null)
               _buildGoOverlay(),
 
             // ── Winner overlay ──
-            if (_winner != null)
-              _buildWinnerOverlay(),
+            if (_winner != null) _buildWinnerOverlay(),
           ],
         ),
       ),
@@ -258,7 +264,8 @@ class _RaceScreenState extends State<RaceScreen> {
           return Row(
             children: [
               Container(
-                width: 10, height: 10,
+                width: 10,
+                height: 10,
                 decoration: BoxDecoration(
                   color: racer.color,
                   borderRadius: BorderRadius.circular(2),
@@ -451,7 +458,8 @@ class _RaceScreenState extends State<RaceScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.emoji_events, color: F1Colors.warningAmber, size: 48),
+                const Icon(Icons.emoji_events,
+                    color: F1Colors.warningAmber, size: 48),
                 const SizedBox(height: 12),
                 const Text(
                   'RACE WINNER',
