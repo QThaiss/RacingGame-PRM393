@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/racer.dart';
 import '../theme/f1_theme.dart';
@@ -136,12 +137,23 @@ class RaceLane extends StatelessWidget {
               // 6. Animated car image — original left-to-right movement
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 50),
-                curve: Curves.easeOut,
+                curve: Curves.easeInOut, // Mượt mà hơn Curves.easeOut
                 left: currentLeftOffset + 12,
-                top: orientation == Orientation.portrait ? 10.0 : 5.0,
-                bottom: orientation == Orientation.portrait ? 10.0 : 5.0,
-                child: SizedBox(
+                top: (orientation == Orientation.portrait ? 10.0 : 5.0) + (progress < 1.0 ? (Random().nextDouble() * 2 - 1) : 0), // Hiệu ứng rung khi đang chạy
+                bottom: (orientation == Orientation.portrait ? 10.0 : 5.0) + (progress < 1.0 ? (Random().nextDouble() * 2 - 1) : 0),
+                child: Container(
                   width: racerSize,
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      if (progress > 0 && progress < 1.0)
+                        BoxShadow(
+                          color: racer.color.withAlpha(100),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                          offset: const Offset(-10, 0), // Vệt tốc độ phía sau
+                        ),
+                    ],
+                  ),
                   child: Image.asset(
                     racer.imagePath,
                     fit: BoxFit.contain,

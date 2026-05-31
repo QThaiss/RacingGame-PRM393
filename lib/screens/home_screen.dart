@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/racer.dart';
+import '../models/bet.dart';
 import '../theme/f1_theme.dart';
 import '../widgets/racer_bet_card.dart';
 import 'race_screen.dart';
@@ -14,8 +15,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Ưu tiên số 1: Quản lý tiền
   double _totalMoney = 100.0;
 
+  // Ưu tiên số 1: Danh sách Racer mẫu
   final List<Racer> _racers = [
     Racer(
       id: 'car_1',
@@ -40,14 +43,15 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   ];
 
-  final Map<String, double> _bets = {};
+  // Ưu tiên số 1: Sử dụng Class Bet để lưu trữ thông tin cược
+  final Map<String, Bet> _bets = {};
   final Map<String, TextEditingController> _controllers = {};
 
   @override
   void initState() {
     super.initState();
     for (var racer in _racers) {
-      _bets[racer.id] = 0.0;
+      _bets[racer.id] = Bet(racer: racer, amount: 0.0);
       _controllers[racer.id] = TextEditingController(text: '0');
     }
   }
@@ -61,15 +65,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   double _calculateTotalBet() {
-    return _bets.values.fold(0.0, (sum, item) => sum + item);
+    return _bets.values.fold(0.0, (sum, bet) => sum + bet.amount);
   }
 
   void _updateBetByAmount(String racerId, double increment) {
     setState(() {
-      double currentBet = _bets[racerId] ?? 0.0;
+      double currentBet = _bets[racerId]?.amount ?? 0.0;
       double newBet = currentBet + increment;
       if (newBet < 0) newBet = 0.0;
-      _bets[racerId] = newBet;
+      _bets[racerId]?.amount = newBet;
       _controllers[racerId]?.text = newBet % 1 == 0 ? newBet.toInt().toString() : newBet.toString();
     });
   }
@@ -77,11 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _handleTextChange(String racerId, String value) {
     setState(() {
       double? parsedValue = double.tryParse(value);
-      if (parsedValue == null || parsedValue < 0) {
-        _bets[racerId] = 0.0;
-      } else {
-        _bets[racerId] = parsedValue;
-      }
+      _bets[racerId]?.amount = (parsedValue == null || parsedValue < 0) ? 0.0 : parsedValue;
     });
   }
 
@@ -155,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       padding: const EdgeInsets.only(bottom: 6),
                                       child: RacerBetCard(
                                         racer: racer,
-                                        betAmount: _bets[racer.id] ?? 0.0,
+                                        betAmount: _bets[racer.id]?.amount ?? 0.0,
                                         controller: _controllers[racer.id]!,
                                         onIncrement: () => _updateBetByAmount(racer.id, 10.0),
                                         onDecrement: () => _updateBetByAmount(racer.id, -10.0),
@@ -189,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               padding: const EdgeInsets.only(bottom: 10),
                               child: RacerBetCard(
                                 racer: racer,
-                                betAmount: _bets[racer.id] ?? 0.0,
+                                betAmount: _bets[racer.id]?.amount ?? 0.0,
                                 controller: _controllers[racer.id]!,
                                 onIncrement: () => _updateBetByAmount(racer.id, 10.0),
                                 onDecrement: () => _updateBetByAmount(racer.id, -10.0),
@@ -465,7 +465,7 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _totalMoney = 100.0;
             for (var r in _racers) {
-              _bets[r.id] = 0.0;
+              _bets[r.id]?.amount = 0.0;
               _controllers[r.id]?.text = '0';
             }
           });
@@ -491,12 +491,15 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ElevatedButton(
         onPressed: canStart
             ? () async {
+                // Chuyển đổi Map<String, Bet> sang Map<String, double> cho RaceScreen
+                final Map<String, double> betAmounts = _bets.map((key, bet) => MapEntry(key, bet.amount));
+                
                 final double? newMoney = await Navigator.push<double>(
                   context,
                   MaterialPageRoute(
                     builder: (_) => RaceScreen(
                       totalMoney: _totalMoney,
-                      bets: Map.from(_bets),
+                      bets: betAmounts,
                       racers: _racers,
                     ),
                   ),
@@ -505,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   setState(() {
                     _totalMoney = newMoney;
                     for (var racer in _racers) {
-                      _bets[racer.id] = 0.0;
+                      _bets[racer.id]?.amount = 0.0;
                       _controllers[racer.id]?.text = '0';
                     }
                   });

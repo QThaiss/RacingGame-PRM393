@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../models/racer.dart';
 import '../theme/f1_theme.dart';
+import 'bet_input_field.dart';
 
 /// Driver card styled like an F1 starting grid entry.
 /// Shows car image, driver name, payout odds, and bet controls.
@@ -33,15 +33,10 @@ class RacerBetCard extends StatelessWidget {
     final double imgWidth = isLandscape ? 60.0 : 80.0;
     final double imgHeight = isLandscape ? 36.0 : 50.0;
     final double titleFontSize = isLandscape ? 13.0 : 16.0;
-    final double controlBtnSize = isLandscape ? 34.0 : 40.0;
-    final double inputWidth = isLandscape ? 56.0 : 64.0;
-    final double inputFontSize = isLandscape ? 13.0 : 15.0;
 
     return Container(
       decoration: BoxDecoration(
         color: F1Colors.panelGray,
-        // No borderRadius — non-uniform border colors require sharp edges
-        // (also more authentic to F1 broadcast UI)
         border: Border(
           left: BorderSide(color: accent, width: 4),
           top: const BorderSide(color: F1Colors.borderGray, width: 0.5),
@@ -113,67 +108,15 @@ class RacerBetCard extends StatelessWidget {
             ),
           ),
 
-          // Bet controls: [ - ] [ input ] [ + ]
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildControlButton(Icons.remove, accent, onDecrement, controlBtnSize),
-              Container(
-                width: inputWidth,
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                child: TextField(
-                  controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                  ],
-                  onChanged: onChanged,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: inputFontSize,
-                    fontWeight: FontWeight.w700,
-                    color: F1Colors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(vertical: isLandscape ? 6 : 8),
-                    filled: true,
-                    fillColor: F1Colors.carbonBlack,
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      borderSide: const BorderSide(color: F1Colors.borderGray),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      borderSide: BorderSide(color: accent, width: 1.5),
-                    ),
-                  ),
-                ),
-              ),
-              _buildControlButton(Icons.add, accent, onIncrement, controlBtnSize),
-            ],
+          // Bet controls (Now extracted to BetInputField)
+          BetInputField(
+            controller: controller,
+            accentColor: accent,
+            onIncrement: onIncrement,
+            onDecrement: onDecrement,
+            onChanged: onChanged,
           ),
         ],
-      ),
-    );
-  }
-
-  /// Square control button with team accent color.
-  Widget _buildControlButton(IconData icon, Color color, VoidCallback onTap, double size) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: F1Colors.borderGray, width: 1),
-            color: F1Colors.asphaltDark,
-          ),
-          child: Icon(icon, size: size * 0.5, color: color),
-        ),
       ),
     );
   }

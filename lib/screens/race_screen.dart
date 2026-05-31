@@ -72,12 +72,23 @@ class _RaceScreenState extends State<RaceScreen> {
     });
 
     final Random random = Random();
+    // Khởi tạo biến lưu trữ "tốc độ tức thời" cho mỗi xe để tạo hiệu ứng gia tốc/giảm tốc
+    final Map<String, double> momentums = {};
+    for (var racer in widget.racers) {
+      momentums[racer.id] = 0.01 + random.nextDouble() * 0.01;
+    }
 
     _raceTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
       setState(() {
         for (var racer in widget.racers) {
           final double currentProgress = _positions[racer.id] ?? 0.0;
-          final double step = random.nextDouble() * 0.03;
+          
+          // CẢI TIẾN: Tốc độ biến thiên (Variable Speed)
+          // Đôi khi xe sẽ tăng tốc mạnh, đôi khi sẽ khựng lại một chút
+          double drift = (random.nextDouble() - 0.48) * 0.005; 
+          momentums[racer.id] = (momentums[racer.id]! + drift).clamp(0.005, 0.04);
+          
+          final double step = momentums[racer.id]!;
           final double newProgress = currentProgress + step;
 
           if (newProgress >= 1.0) {

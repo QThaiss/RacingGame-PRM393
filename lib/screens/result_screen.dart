@@ -122,25 +122,44 @@ class ResultScreen extends StatelessWidget {
           right: const BorderSide(color: F1Colors.borderGray, width: 1),
           bottom: const BorderSide(color: F1Colors.borderGray, width: 1),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: winner.color.withAlpha(40),
+            blurRadius: 30,
+            spreadRadius: 5,
+          ),
+        ],
       ),
       child: Column(
         children: [
           // P1 badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: winner.color.withAlpha(30),
-              borderRadius: BorderRadius.circular(2),
-              border: Border.all(color: winner.color.withAlpha(80)),
-            ),
-            child: Text(
-              'P1',
-              style: TextStyle(
-                color: winner.color,
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 800),
+            builder: (context, value, child) {
+              return Transform.scale(
+                scale: 0.8 + (value * 0.4), // Hiệu ứng phóng to P1 badge
+                child: Opacity(
+                  opacity: value,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: winner.color.withAlpha(30),
+                      borderRadius: BorderRadius.circular(2),
+                      border: Border.all(color: winner.color.withAlpha(80)),
+                    ),
+                    child: Text(
+                      'P1',
+                      style: TextStyle(
+                        color: winner.color,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
           const Text(
