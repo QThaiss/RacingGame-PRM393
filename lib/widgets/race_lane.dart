@@ -38,7 +38,7 @@ class RaceLane extends StatelessWidget {
           margin: EdgeInsets.symmetric(vertical: laneMargin),
           decoration: BoxDecoration(
             // Subtle asphalt gradient for depth
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [

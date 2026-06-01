@@ -70,7 +70,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    for (var c in _controllers.values) c.dispose();
+    for (var c in _controllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -519,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: F1Colors.warningAmber,
           foregroundColor: F1Colors.carbonBlack,
         ),
-        child: const Text('RESET $100 BALANCE'),
+        child: const Text('RESET \$100 BALANCE'),
       );
     }
 
@@ -542,6 +544,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
 
                 await AudioService.instance.fadeBgMusic();
+                if (!mounted) return;
 
                 final double? newMoney = await Navigator.push<double>(
                   context,

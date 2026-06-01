@@ -168,14 +168,14 @@ class _RaceScreenState extends State<RaceScreen> {
         child: Stack(
           children: [
             // ── Subtle background gradient for the whole screen ──
-            Positioned.fill(
+            const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
                     center: Alignment.center,
                     radius: 1.2,
                     colors: [
-                      const Color(0xFF1A1A20),
+                      Color(0xFF1A1A20),
                       F1Colors.carbonBlack,
                     ],
                   ),
