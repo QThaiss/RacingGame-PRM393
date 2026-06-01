@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/racer.dart';
 import '../theme/f1_theme.dart';
 import '../widgets/race_lane.dart';
+import '../services/audio_service.dart';
 import 'result_screen.dart';
 
 /// Race screen — F1 broadcast HUD with original horizontal lanes.
@@ -27,6 +28,7 @@ class RaceScreen extends StatefulWidget {
 
 class _RaceScreenState extends State<RaceScreen> {
   final Map<String, double> _positions = {};
+  final Map<String, double> _wobbles = {};
   Timer? _raceTimer;
   Timer? _countdownTimer;
   bool _isRacing = false;
@@ -39,6 +41,7 @@ class _RaceScreenState extends State<RaceScreen> {
     super.initState();
     for (var racer in widget.racers) {
       _positions[racer.id] = 0.0;
+      _wobbles[racer.id] = 0.0;
     }
     _startLightSequence();
   }
@@ -52,6 +55,7 @@ class _RaceScreenState extends State<RaceScreen> {
 
   /// F1-style: lights go on one-by-one (5 reds), then all out = GO
   void _startLightSequence() {
+    AudioService.instance.playRaceStart();
     _countdownTimer =
         Timer.periodic(const Duration(milliseconds: 800), (timer) {
       setState(() {
@@ -71,6 +75,7 @@ class _RaceScreenState extends State<RaceScreen> {
     setState(() {
       _isRacing = true;
     });
+    AudioService.instance.playRaceBg();
 
     final Random random = Random();
     // Khởi tạo biến lưu trữ "tốc độ tức thời" cho mỗi xe để tạo hiệu ứng gia tốc/giảm tốc
@@ -84,8 +89,6 @@ class _RaceScreenState extends State<RaceScreen> {
         for (var racer in widget.racers) {
           final double currentProgress = _positions[racer.id] ?? 0.0;
 
-          // CẢI TIẾN: Tốc độ biến thiên (Variable Speed)
-          // Đôi khi xe sẽ tăng tốc mạnh, đôi khi sẽ khựng lại một chút
           double drift = (random.nextDouble() - 0.48) * 0.005;
           momentums[racer.id] =
               (momentums[racer.id]! + drift).clamp(0.005, 0.04);
@@ -93,8 +96,12 @@ class _RaceScreenState extends State<RaceScreen> {
           final double step = momentums[racer.id]!;
           final double newProgress = currentProgress + step;
 
+          // Update wobble: small random vertical offset for realistic motion
+          _wobbles[racer.id] = (random.nextDouble() * 2 - 1) * 1.5;
+
           if (newProgress >= 1.0) {
             _positions[racer.id] = 1.0;
+            _wobbles[racer.id] = 0.0;
             _handleRaceFinish(racer);
             break;
           } else {
@@ -107,10 +114,18 @@ class _RaceScreenState extends State<RaceScreen> {
 
   void _handleRaceFinish(Racer winnerRacer) {
     _raceTimer?.cancel();
+    AudioService.instance.stopBgMusic();
     setState(() {
       _isRacing = false;
       _winner = winnerRacer;
     });
+    // Play win or lose sound based on whether the player bet on the winner
+    final double playerBetOnWinner = widget.bets[winnerRacer.id] ?? 0.0;
+    if (playerBetOnWinner > 0) {
+      AudioService.instance.playWin();
+    } else {
+      AudioService.instance.playLose();
+    }
 
     Future.delayed(const Duration(milliseconds: 1800), () async {
       if (!mounted) return;
@@ -152,6 +167,22 @@ class _RaceScreenState extends State<RaceScreen> {
       body: SafeArea(
         child: Stack(
           children: [
+            // ── Subtle background gradient for the whole screen ──
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.2,
+                    colors: [
+                      const Color(0xFF1A1A20),
+                      F1Colors.carbonBlack,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // ── Main race layout ──
             Column(
               children: [
@@ -174,6 +205,7 @@ class _RaceScreenState extends State<RaceScreen> {
                             return RaceLane(
                               racer: racer,
                               progress: _positions[racer.id] ?? 0.0,
+                              wobble: _wobbles[racer.id] ?? 0.0,
                             );
                           }).toList(),
                         ),

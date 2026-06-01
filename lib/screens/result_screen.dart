@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/racer.dart';
 import '../theme/f1_theme.dart';
+import '../services/prefs_service.dart';
 
 /// Result screen — F1 Race Classification style.
 /// Shows winner, payout breakdown, and detailed bet statistics.
-class ResultScreen extends StatelessWidget {
+class ResultScreen extends StatefulWidget {
   final Racer winner;
   final double totalMoney;
   final Map<String, double> bets;
@@ -19,7 +20,28 @@ class ResultScreen extends StatelessWidget {
   });
 
   @override
+  State<ResultScreen> createState() => _ResultScreenState();
+}
+
+class _ResultScreenState extends State<ResultScreen> {
+  // Convenience getters so all helper methods keep working unchanged
+  Racer get winner => widget.winner;
+  double get totalMoney => widget.totalMoney;
+  Map<String, double> get bets => widget.bets;
+  List<Racer> get racers => widget.racers;
+
+  @override
+  void initState() {
+    super.initState();
+    final double totalBet = widget.bets.values.fold(0.0, (s, v) => s + v);
+    final double winningBet = widget.bets[widget.winner.id] ?? 0.0;
+    final double newMoney = widget.totalMoney - totalBet + (winningBet * 2);
+    PrefsService.saveMoney(newMoney);
+  }
+
+  @override
   Widget build(BuildContext context) {
+
     final double totalBet = bets.values.fold(0.0, (sum, val) => sum + val);
     final double winningBet = bets[winner.id] ?? 0.0;
     final double newMoney = totalMoney - totalBet + (winningBet * 2);

@@ -1,21 +1,24 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/racer.dart';
 import '../theme/f1_theme.dart';
 
-/// Horizontal race lane — restores original left-to-right car animation.
+/// Horizontal race lane — left-to-right car animation.
 /// Styled with F1 asphalt aesthetics: team color left strip, dashed lane
 /// markings, start/finish lines, and car image positioned by progress.
+/// [wobble] is a pre-computed vertical offset (−1..1) managed by the parent
+/// so Random() is never called inside build.
 class RaceLane extends StatelessWidget {
   final Racer racer;
   final double progress; // 0.0 (start) to 1.0 (finish)
   final double racerSize;
+  final double wobble; // vertical jitter controlled by RaceScreen
 
   const RaceLane({
     super.key,
     required this.racer,
     required this.progress,
     this.racerSize = 80.0,
+    this.wobble = 0.0,
   });
 
   @override
@@ -34,7 +37,16 @@ class RaceLane extends StatelessWidget {
           height: laneHeight,
           margin: EdgeInsets.symmetric(vertical: laneMargin),
           decoration: BoxDecoration(
-            color: F1Colors.pitWallGray,
+            // Subtle asphalt gradient for depth
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                F1Colors.panelGray,
+                F1Colors.pitWallGray,
+                F1Colors.panelGray,
+              ],
+            ),
             border: Border(
               left: BorderSide(color: racer.color, width: 4),
               top: const BorderSide(color: F1Colors.borderGray, width: 0.5),
@@ -134,23 +146,23 @@ class RaceLane extends StatelessWidget {
                 ),
               ),
 
-              // 6. Animated car image — original left-to-right movement
+              // 6. Animated car image — smooth left-to-right movement
               AnimatedPositioned(
-                duration: const Duration(milliseconds: 50),
-                curve: Curves.easeInOut, // Mượt mà hơn Curves.easeOut
+                duration: const Duration(milliseconds: 80),
+                curve: Curves.linear,
                 left: currentLeftOffset + 12,
-                top: (orientation == Orientation.portrait ? 10.0 : 5.0) + (progress < 1.0 ? (Random().nextDouble() * 2 - 1) : 0), // Hiệu ứng rung khi đang chạy
-                bottom: (orientation == Orientation.portrait ? 10.0 : 5.0) + (progress < 1.0 ? (Random().nextDouble() * 2 - 1) : 0),
+                top: (orientation == Orientation.portrait ? 10.0 : 5.0) + wobble,
+                bottom: (orientation == Orientation.portrait ? 10.0 : 5.0) - wobble,
                 child: Container(
                   width: racerSize,
                   decoration: BoxDecoration(
                     boxShadow: [
                       if (progress > 0 && progress < 1.0)
                         BoxShadow(
-                          color: racer.color.withAlpha(100),
-                          blurRadius: 15,
-                          spreadRadius: 2,
-                          offset: const Offset(-10, 0), // Vệt tốc độ phía sau
+                          color: racer.color.withAlpha(120),
+                          blurRadius: 18,
+                          spreadRadius: 3,
+                          offset: const Offset(-12, 0),
                         ),
                     ],
                   ),

@@ -4,6 +4,8 @@ import '../models/bet.dart';
 import '../theme/f1_theme.dart';
 import '../widgets/racer_bet_card.dart';
 import '../repositories/auth_repository.dart';
+import '../services/audio_service.dart';
+import '../services/prefs_service.dart';
 import 'race_screen.dart';
 import 'login_screen.dart'; // Đăng xuất đẩy về đây
 
@@ -54,6 +56,15 @@ class _HomeScreenState extends State<HomeScreen> {
     for (var racer in _racers) {
       _bets[racer.id] = Bet(racer: racer, amount: 0.0);
       _controllers[racer.id] = TextEditingController(text: '0');
+    }
+    _loadMoney();
+    AudioService.instance.playHomeBg();
+  }
+
+  Future<void> _loadMoney() async {
+    final saved = await PrefsService.loadMoney();
+    if (mounted) {
+      setState(() => _totalMoney = saved);
     }
   }
 
@@ -263,7 +274,49 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const Spacer(),
-          // Nút Đăng xuất được thêm mới ở góc phải trên cùng thanh Bar
+          // Mute toggle button
+          StatefulBuilder(
+            builder: (context, setLocal) => GestureDetector(
+              onTap: () {
+                AudioService.instance.toggleMute();
+                setLocal(() {});
+              },
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  AudioService.instance.isMuted ? Icons.volume_off : Icons.volume_up,
+                  color: AudioService.instance.isMuted ? F1Colors.textMuted : F1Colors.signalGreen,
+                  size: isLandscape ? 16 : 18,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: isLandscape ? 8 : 10),
+          // Live indicator
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: isLandscape ? 6 : 8, vertical: isLandscape ? 2 : 3),
+            decoration: BoxDecoration(
+              border: Border.all(color: F1Colors.signalGreen, width: 1),
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.circle, color: F1Colors.signalGreen, size: 6),
+                const SizedBox(width: 4),
+                Text(
+                  'LIVE',
+                  style: TextStyle(
+                    color: F1Colors.signalGreen,
+                    fontSize: isLandscape ? 8 : 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Nút Đăng xuất
           IconButton(
             icon: const Icon(Icons.logout, color: F1Colors.textMuted, size: 20),
             tooltip: 'Đăng xuất tài khoản',
@@ -460,12 +513,13 @@ class _HomeScreenState extends State<HomeScreen> {
           });
           // Đồng bộ reset tiền xuống SharedPreferences thông qua Repo
           await _authRepo.updateCurrentBalance(100.0);
+          await PrefsService.resetMoney();
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: F1Colors.warningAmber,
           foregroundColor: F1Colors.carbonBlack,
         ),
-        child: const Text('RESET \$100 BALANCE'),
+        child: const Text('RESET $100 BALANCE'),
       );
     }
 
@@ -487,6 +541,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   (key, bet) => MapEntry(key, bet.amount),
                 );
 
+                await AudioService.instance.fadeBgMusic();
+
                 final double? newMoney = await Navigator.push<double>(
                   context,
                   MaterialPageRoute(
@@ -507,7 +563,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
                   // ĐẶC BIỆT: Đồng bộ cập nhật lưu số tiền mới của riêng user này xuống thiết bị bền vững
                   await _authRepo.updateCurrentBalance(newMoney);
+                  await PrefsService.saveMoney(newMoney);
                 }
+                AudioService.instance.playHomeBg();
               }
             : null,
         style: ElevatedButton.styleFrom(
