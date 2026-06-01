@@ -3,11 +3,12 @@ description: A mini racing game for learning Flutter.
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  shared_preferences: ^2.2.0 # Thêm thư viện này để lưu số tiền bền vững
 
 dev_dependencies:
   flutter_lints: ^3.0.0
