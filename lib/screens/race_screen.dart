@@ -167,16 +167,119 @@ class _RaceScreenState extends State<RaceScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // ── Subtle background gradient for the whole screen ──
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
+            // ── Atmospheric F1 background ──
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
                   gradient: RadialGradient(
                     center: Alignment.center,
                     radius: 1.2,
                     colors: [
-                      Color(0xFF1A1A20),
+                      Color(0xFF1E1E26),
+                      Color(0xFF141418),
                       F1Colors.carbonBlack,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Subtle crowd / atmosphere gradient strips ──
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 60,
+              height: 60,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withAlpha(0),
+                      F1Colors.racingRed.withAlpha(12),
+                      Colors.black.withAlpha(0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 60,
+              height: 60,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withAlpha(0),
+                      F1Colors.telemetryCyan.withAlpha(8),
+                      Colors.black.withAlpha(0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Ambient glow at track area ──
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0, -0.2),
+                      radius: 0.8,
+                      colors: [
+                        F1Colors.racingRed.withAlpha(8),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Top vignette ──
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withAlpha(100),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Bottom vignette ──
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withAlpha(100),
+                      Colors.transparent,
                     ],
                   ),
                 ),
@@ -234,13 +337,29 @@ class _RaceScreenState extends State<RaceScreen> {
     );
   }
 
-  /// F1 top header bar
+  /// F1 top header bar — revamped with gradient and glow
   Widget _buildRaceTopBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: const BoxDecoration(
-        color: F1Colors.asphaltDark,
-        border: Border(bottom: BorderSide(color: F1Colors.racingRed, width: 2)),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF1C1C22),
+            F1Colors.asphaltDark,
+          ],
+        ),
+        border: const Border(
+          bottom: BorderSide(color: F1Colors.racingRed, width: 2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: F1Colors.racingRed.withAlpha(40),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -284,11 +403,23 @@ class _RaceScreenState extends State<RaceScreen> {
     );
   }
 
-  /// Compact bet summary strip
+  /// Compact bet summary strip — revamped with gradient
   Widget _buildBetStrip() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: F1Colors.pitWallGray,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            F1Colors.pitWallGray,
+            F1Colors.pitWallGray.withAlpha(200),
+          ],
+        ),
+        border: const Border(
+          bottom: BorderSide(color: F1Colors.borderGray, width: 0.5),
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: widget.racers.map((racer) {
@@ -319,21 +450,40 @@ class _RaceScreenState extends State<RaceScreen> {
     );
   }
 
-  /// Bottom status / leader bar
+  /// Bottom status / leader bar — revamped with gradient
   Widget _buildStatusBar(List<MapEntry<Racer, double>> sorted) {
     final String statusText;
     if (_winner != null) {
-      statusText = '🏆 ${_winner!.name.toUpperCase()} WINS!';
+      statusText = '  ${_winner!.name.toUpperCase()} WINS!';
     } else if (_isRacing) {
       final leader = sorted.first.key;
-      statusText = 'LEADER: ${leader.name.toUpperCase()}';
+      statusText = '  LEADER: ${leader.name.toUpperCase()}';
     } else {
-      statusText = 'FORMATION LAP...';
+      statusText = '  FORMATION LAP...';
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: F1Colors.asphaltDark,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [
+            Color(0xFF1C1C22),
+            F1Colors.asphaltDark,
+          ],
+        ),
+        border: const Border(
+          top: BorderSide(color: F1Colors.borderGray, width: 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(80),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -357,60 +507,93 @@ class _RaceScreenState extends State<RaceScreen> {
     );
   }
 
-  /// F1 starting lights overlay (5 red lights, one-by-one)
+  /// F1 starting lights overlay (5 red lights, one-by-one) — enhanced
   Widget _buildLightsOverlay() {
     return Container(
-      color: Colors.black.withAlpha(220),
+      color: Colors.black.withAlpha(230),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 5 lights row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (i) {
-                final bool isLit = i < _lightsLit;
-                return Container(
-                  width: 40,
-                  height: 40,
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isLit ? F1Colors.racingRed : F1Colors.panelGray,
-                    border: Border.all(
-                      color: isLit ? F1Colors.racingRed : F1Colors.borderGray,
-                      width: 2,
-                    ),
-                    boxShadow: isLit
-                        ? [
-                            BoxShadow(
-                              color: F1Colors.racingRed.withAlpha(150),
-                              blurRadius: 20,
-                              spreadRadius: 4,
-                            ),
-                          ]
-                        : [],
+            // Shadow/glow behind lights
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: _lightsLit > 0
+                        ? F1Colors.racingRed.withAlpha(20)
+                        : Colors.transparent,
+                    blurRadius: 60,
+                    spreadRadius: 20,
                   ),
-                );
-              }),
-            ),
-            const SizedBox(height: 30),
-            Text(
-              '$_countdown',
-              style: const TextStyle(
-                color: F1Colors.textPrimary,
-                fontSize: 72,
-                fontWeight: FontWeight.w900,
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) {
+                  final bool isLit = i < _lightsLit;
+                  return Container(
+                    width: 44,
+                    height: 44,
+                    margin: const EdgeInsets.symmetric(horizontal: 7),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isLit ? F1Colors.racingRed : const Color(0xFF1A1A1E),
+                      border: Border.all(
+                        color: isLit
+                            ? F1Colors.racingRed
+                            : F1Colors.borderGray,
+                        width: 2.5,
+                      ),
+                      boxShadow: isLit
+                          ? [
+                              BoxShadow(
+                                color: F1Colors.racingRed.withAlpha(180),
+                                blurRadius: 24,
+                                spreadRadius: 6,
+                              ),
+                              BoxShadow(
+                                color: F1Colors.racingRed.withAlpha(60),
+                                blurRadius: 50,
+                                spreadRadius: 2,
+                              ),
+                            ]
+                          : [],
+                    ),
+                  );
+                }),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: F1Colors.borderGray,
+                  width: 0.5,
+                ),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '$_countdown',
+                style: const TextStyle(
+                  color: F1Colors.textPrimary,
+                  fontSize: 80,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             const Text(
               'FORMATION LAP',
               style: TextStyle(
                 color: F1Colors.textMuted,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 3.0,
+                letterSpacing: 4.0,
               ),
             ),
           ],
@@ -419,7 +602,7 @@ class _RaceScreenState extends State<RaceScreen> {
     );
   }
 
-  /// "LIGHTS OUT AND AWAY WE GO" flash overlay
+  /// "LIGHTS OUT AND AWAY WE GO" flash overlay — enhanced
   Widget _buildGoOverlay() {
     Future.delayed(const Duration(milliseconds: 900), () {
       if (mounted && _countdown == 0) {
@@ -430,28 +613,51 @@ class _RaceScreenState extends State<RaceScreen> {
     });
 
     return Container(
-      color: Colors.black.withAlpha(180),
-      child: const Center(
+      color: Colors.black.withAlpha(200),
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            // Glow backdrop
+            Container(
+              width: 300,
+              height: 120,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: F1Colors.racingRed.withAlpha(30),
+                    blurRadius: 80,
+                    spreadRadius: 20,
+                  ),
+                ],
+              ),
+            ),
+            const Text(
               'LIGHTS OUT',
               style: TextStyle(
                 color: F1Colors.textPrimary,
-                fontSize: 36,
+                fontSize: 40,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 4.0,
+                letterSpacing: 6.0,
               ),
             ),
-            SizedBox(height: 4),
-            Text(
-              'AND AWAY WE GO',
-              style: TextStyle(
-                color: F1Colors.signalGreen,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2.0,
+            const SizedBox(height: 6),
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [
+                  F1Colors.signalGreen,
+                  F1Colors.telemetryCyan,
+                ],
+              ).createShader(bounds),
+              child: const Text(
+                'AND AWAY WE GO',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 3.0,
+                ),
               ),
             ),
           ],
