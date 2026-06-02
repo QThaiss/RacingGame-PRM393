@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/racer.dart';
 import '../models/bet.dart';
+import '../models/bet_adjustment.dart';
+import '../models/game_quick_guide.dart';
 import '../theme/f1_theme.dart';
 import '../widgets/racer_bet_card.dart';
 import '../repositories/auth_repository.dart';
@@ -91,23 +93,29 @@ class _HomeScreenState extends State<HomeScreen> {
       _bets.values.fold(0.0, (sum, bet) => sum + bet.amount);
 
   void _updateBetByAmount(String racerId, double increment) {
+    final double currentBet = _bets[racerId]?.amount ?? 0.0;
+    final adjustment = BetAdjustment.apply(
+      currentAmount: currentBet,
+      increment: increment,
+    );
+
     setState(() {
-      double currentBet = _bets[racerId]?.amount ?? 0.0;
-      double newBet = currentBet + increment;
-      if (newBet < 0) newBet = 0.0;
+      final double newBet = adjustment.amount;
       _bets[racerId]?.amount = newBet;
-      _controllers[racerId]?.text = newBet % 1 == 0
-          ? newBet.toInt().toString()
-          : newBet.toString();
+      _controllers[racerId]?.text =
+          newBet % 1 == 0 ? newBet.toInt().toString() : newBet.toString();
     });
+
+    if (adjustment.shouldPlayIncreaseSound) {
+      AudioService.instance.playBetIncrease();
+    }
   }
 
   void _handleTextChange(String racerId, String value) {
     setState(() {
       double? parsedValue = double.tryParse(value);
-      _bets[racerId]?.amount = (parsedValue == null || parsedValue < 0)
-          ? 0.0
-          : parsedValue;
+      _bets[racerId]?.amount =
+          (parsedValue == null || parsedValue < 0) ? 0.0 : parsedValue;
     });
   }
 
@@ -266,16 +274,27 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Text(
-            'PIT WALL: ${_authRepo.currentUser?.username.toUpperCase()}',
-            style: TextStyle(
-              color: F1Colors.textPrimary,
-              fontSize: isLandscape ? 13 : 15,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2.0,
+          Expanded(
+            child: Text(
+              'PIT WALL: ${_authRepo.currentUser?.username.toUpperCase()}',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: F1Colors.textPrimary,
+                fontSize: isLandscape ? 13 : 15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.0,
+              ),
             ),
           ),
-          const Spacer(),
+          IconButton(
+            icon: Icon(
+              Icons.help_outline,
+              color: F1Colors.telemetryCyan,
+              size: isLandscape ? 18 : 20,
+            ),
+            tooltip: 'How to play fast',
+            onPressed: _showQuickGuide,
+          ),
           // Mute toggle button
           StatefulBuilder(
             builder: (context, setLocal) => GestureDetector(
@@ -286,8 +305,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 padding: const EdgeInsets.all(6),
                 child: Icon(
-                  AudioService.instance.isMuted ? Icons.volume_off : Icons.volume_up,
-                  color: AudioService.instance.isMuted ? F1Colors.textMuted : F1Colors.signalGreen,
+                  AudioService.instance.isMuted
+                      ? Icons.volume_off
+                      : Icons.volume_up,
+                  color: AudioService.instance.isMuted
+                      ? F1Colors.textMuted
+                      : F1Colors.signalGreen,
                   size: isLandscape ? 16 : 18,
                 ),
               ),
@@ -296,7 +319,8 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(width: isLandscape ? 8 : 10),
           // Live indicator
           Container(
-            padding: EdgeInsets.symmetric(horizontal: isLandscape ? 6 : 8, vertical: isLandscape ? 2 : 3),
+            padding: EdgeInsets.symmetric(
+                horizontal: isLandscape ? 6 : 8, vertical: isLandscape ? 2 : 3),
             decoration: BoxDecoration(
               border: Border.all(color: F1Colors.signalGreen, width: 1),
               borderRadius: BorderRadius.circular(2),
@@ -323,6 +347,132 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.logout, color: F1Colors.textMuted, size: 20),
             tooltip: 'Đăng xuất tài khoản',
             onPressed: _handleLogout,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showQuickGuide() {
+    final icons = [
+      Icons.sports_motorsports,
+      Icons.add_circle_outline,
+      Icons.account_balance_wallet_outlined,
+      Icons.flag_outlined,
+      Icons.emoji_events_outlined,
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: F1Colors.pitWallGray,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                          width: 3, height: 22, color: F1Colors.racingRed),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'HOW TO PLAY FAST',
+                          style: TextStyle(
+                            color: F1Colors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: F1Colors.textMuted,
+                        ),
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...List.generate(gameQuickGuide.length, (index) {
+                    final item = gameQuickGuide[index];
+                    return _buildGuideRow(
+                      icon: icons[index],
+                      number: index + 1,
+                      title: item.title,
+                      description: item.description,
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGuideRow({
+    required IconData icon,
+    required int number,
+    required String title,
+    required String description,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: F1Colors.asphaltDark,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: F1Colors.borderGray),
+            ),
+            child: Icon(icon, color: F1Colors.telemetryCyan, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$number. ${title.toUpperCase()}',
+                  style: const TextStyle(
+                    color: F1Colors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: F1Colors.textSecondary,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

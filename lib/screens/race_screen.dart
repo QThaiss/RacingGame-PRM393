@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../models/race_start_sequence.dart';
 import '../models/racer.dart';
 import '../theme/f1_theme.dart';
 import '../widgets/race_lane.dart';
@@ -29,10 +30,11 @@ class RaceScreen extends StatefulWidget {
 class _RaceScreenState extends State<RaceScreen> {
   final Map<String, double> _positions = {};
   final Map<String, double> _wobbles = {};
+  final RaceStartSequence _startSequence = RaceStartSequence();
   Timer? _raceTimer;
   Timer? _countdownTimer;
   bool _isRacing = false;
-  int _countdown = 3;
+  int _countdown = RaceStartSequence.defaultLightCount;
   Racer? _winner;
   int _lightsLit = 0;
 
@@ -55,19 +57,24 @@ class _RaceScreenState extends State<RaceScreen> {
 
   /// F1-style: lights go on one-by-one (5 reds), then all out = GO
   void _startLightSequence() {
-    AudioService.instance.playRaceStart();
+    AudioService.instance.playRaceCountdownTick();
     _countdownTimer =
         Timer.periodic(const Duration(milliseconds: 800), (timer) {
+      final frame = _startSequence.advance();
+
       setState(() {
-        if (_lightsLit < 5) {
-          _lightsLit++;
-          _countdown = 5 - _lightsLit;
-        } else {
-          _countdown = 0;
-          _countdownTimer?.cancel();
-          _startRace();
-        }
+        _lightsLit = frame.lightsLit;
+        _countdown = frame.countdown;
       });
+
+      if (frame.shouldPlayCountdownSound) {
+        AudioService.instance.playRaceCountdownTick();
+      }
+
+      if (frame.shouldStartRace) {
+        _countdownTimer?.cancel();
+        _startRace();
+      }
     });
   }
 
@@ -540,11 +547,10 @@ class _RaceScreenState extends State<RaceScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 7),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isLit ? F1Colors.racingRed : const Color(0xFF1A1A1E),
+                      color:
+                          isLit ? F1Colors.racingRed : const Color(0xFF1A1A1E),
                       border: Border.all(
-                        color: isLit
-                            ? F1Colors.racingRed
-                            : F1Colors.borderGray,
+                        color: isLit ? F1Colors.racingRed : F1Colors.borderGray,
                         width: 2.5,
                       ),
                       boxShadow: isLit

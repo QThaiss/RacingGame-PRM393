@@ -8,6 +8,7 @@ class AudioService {
 
   final AudioPlayer _bgPlayer = AudioPlayer();
   final AudioPlayer _sfxPlayer = AudioPlayer();
+  final AudioPlayer _countdownPlayer = AudioPlayer();
 
   bool _muted = false;
   bool get isMuted => _muted;
@@ -17,6 +18,15 @@ class AudioService {
     try {
       await _sfxPlayer.stop();
       await _sfxPlayer.play(AssetSource('audio/$asset'));
+    } catch (_) {}
+  }
+
+  Future<void> _playCountdownSfx(String asset) async {
+    if (_muted) return;
+    try {
+      await _countdownPlayer.stop();
+      await _countdownPlayer.setReleaseMode(ReleaseMode.stop);
+      await _countdownPlayer.play(AssetSource('audio/$asset'), volume: 1);
     } catch (_) {}
   }
 
@@ -45,23 +55,30 @@ class AudioService {
     } catch (_) {}
   }
 
-  Future<void> playRaceStart() => _playSfx('race_start.mp3');
+  Future<void> playRaceCountdownTick() => _playCountdownSfx('race_start.mp3');
+  Future<void> playRaceStart() => playRaceCountdownTick();
   Future<void> playRaceBg() => playBgMusic('race_bg.mp3');
   Future<void> playWin() => _playSfx('win.mp3');
   Future<void> playLose() => _playSfx('lose.mp3');
   Future<void> playHomeBg() => playBgMusic('bg_music.mp3');
+  Future<void> playBetIncrease() => _playSfx('bet_tick.wav');
 
   void toggleMute() {
     _muted = !_muted;
     if (_muted) {
       _bgPlayer.setVolume(0);
+      _sfxPlayer.setVolume(0);
+      _countdownPlayer.setVolume(0);
     } else {
       _bgPlayer.setVolume(0.4);
+      _sfxPlayer.setVolume(1);
+      _countdownPlayer.setVolume(1);
     }
   }
 
   void dispose() {
     _bgPlayer.dispose();
     _sfxPlayer.dispose();
+    _countdownPlayer.dispose();
   }
 }
